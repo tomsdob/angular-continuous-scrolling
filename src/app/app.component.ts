@@ -6,12 +6,13 @@ import {
   QueryList,
   ViewChildren,
 } from '@angular/core';
-import { ImageService } from './services/image.service';
+import { ApiService } from './services/api.service';
 import { ImageComponent } from './components/image/image.component';
 
 // Types
 import { Image } from './types/Image';
 import { Character } from './types/Character';
+import { APIData } from './types/APIData';
 
 @Component({
   selector: 'app-root',
@@ -19,24 +20,31 @@ import { Character } from './types/Character';
 })
 export class AppComponent implements OnInit, AfterViewInit {
   isLoading: boolean = false;
-  pageQueryParameter: number = 1;
+  page: number = 1;
   images: Image[] = [];
-  // TODO:
+  // TODO: assign the value before ngOnInit, as I don't know how to do it yet
+  pageAmount: number | null = null;
   lastImageObserver!: IntersectionObserver;
 
+  // Get all of the ImageComponents as elements for the IntersectionObserver
   @ViewChildren(ImageComponent, { read: ElementRef })
-  lastImage!: QueryList<Element>;
+  imageComponents!: QueryList<Element>;
 
-  constructor(private imageService: ImageService) {}
+  constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
-    this.getImages(this.pageQueryParameter);
+    this.getPageAmount();
+    this.getImages(this.page);
     this.intersectionObserver();
   }
 
   ngAfterViewInit(): void {
-    this.lastImage.changes.subscribe(
+    this.imageComponents.changes.subscribe(
       (queryList: QueryList<ElementRef<Element>>) => {
+        // Disconnect the observer prior to observing, so it doesn't observe the
+        // previous last element/-s too
+        this.lastImageObserver.disconnect();
+
         if (queryList.last) {
           this.lastImageObserver.observe(queryList.last.nativeElement);
         }
@@ -44,23 +52,34 @@ export class AppComponent implements OnInit, AfterViewInit {
     );
   }
 
-  getImages(page: number): void {
-    this.imageService.getImages(page).subscribe((apiData) => {
-      this.isLoading = true;
+  getPageAmount(): void {
+    this.apiService
+      .getData()
+      .subscribe((data: APIData) => (this.pageAmount = data.info.pages));
+  }
 
-      apiData.results.forEach((character: Character) => {
+  getImages(page: number): void {
+    // Checking if it's the last page
+    if (this.pageAmount && this.pageAmount <= this.page - 1) {
+      return;
+    }
+
+    this.isLoading = true;
+
+    this.apiService.getData(page).subscribe((data: APIData) => {
+      data.results.forEach((character: Character) => {
         const image: Image = {
           title: character.name,
           src: character.image,
         };
 
+        // Add each image to the images array
         this.images.push(image);
       });
-
-      setTimeout(() => {
-        this.isLoading = false;
-      }, 2000);
     });
+
+    this.page += 1;
+    this.isLoading = false;
   }
 
   intersectionObserver(): void {
@@ -72,10 +91,9 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     this.lastImageObserver = new IntersectionObserver((entries) => {
       entries.forEach(() => {
-        // TODO:
+        // If the element is in view, fetch new images
         if (entries[0].isIntersecting) {
-          this.pageQueryParameter += 1;
-          this.getImages(this.pageQueryParameter);
+          this.getImages(this.page);
         }
       });
     }, options);
