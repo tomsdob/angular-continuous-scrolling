@@ -10,9 +10,9 @@ import { ApiService } from './services/api.service';
 import { ImageComponent } from './components/image/image.component';
 
 // Types
-import { Image } from './types/Image';
-import { Character } from './types/Character';
 import { APIData } from './types/APIData';
+import { Character } from './types/Character';
+import { Image } from './types/Image';
 
 @Component({
   selector: 'app-root',
@@ -26,7 +26,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   pageAmount: number | null = null;
   lastImageObserver!: IntersectionObserver;
 
-  // Get all of the ImageComponents as elements for the IntersectionObserver
+  // Get all of the ImageComponents as DOM elements for the IntersectionObserver
   @ViewChildren(ImageComponent, { read: ElementRef })
   imageComponents!: QueryList<Element>;
 
@@ -35,14 +35,14 @@ export class AppComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.getPageAmount();
     this.getImages(this.page);
-    this.intersectionObserver();
+    this.lastImageIntersectionObserver();
   }
 
   ngAfterViewInit(): void {
     this.imageComponents.changes.subscribe(
       (queryList: QueryList<ElementRef<Element>>) => {
         // Disconnect the observer prior to observing, so it doesn't observe the
-        // previous last element/-s too
+        // previous last element anymore
         this.lastImageObserver.disconnect();
 
         if (queryList.last) {
@@ -60,7 +60,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   getImages(page: number): void {
     // Checking if it's the last page
-    if (this.pageAmount && this.pageAmount <= this.page - 1) {
+    if (this.isLastPage()) {
       return;
     }
 
@@ -68,13 +68,18 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     this.apiService.getData(page).subscribe((data: APIData) => {
       data.results.forEach((character: Character) => {
-        const image: Image = {
+        // Add each image to the images array
+
+        // const image: Image = {
+        //   title: character.name,
+        //   src: character.image,
+        // };
+        // this.images.push(image);
+
+        this.images.push({
           title: character.name,
           src: character.image,
-        };
-
-        // Add each image to the images array
-        this.images.push(image);
+        });
       });
     });
 
@@ -82,20 +87,28 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.isLoading = false;
   }
 
-  intersectionObserver(): void {
+  lastImageIntersectionObserver(): void {
     const options = {
       root: null,
       rootMargin: '0px',
-      threshold: 0.5,
+      threshold: 1,
     };
 
     this.lastImageObserver = new IntersectionObserver((entries) => {
-      entries.forEach(() => {
-        // If the element is in view, fetch new images
-        if (entries[0].isIntersecting) {
+      entries.forEach((entry) => {
+        // If the last element is in view/intersecting, fetch new images
+        if (entry.isIntersecting) {
           this.getImages(this.page);
         }
       });
     }, options);
+  }
+
+  isLastPage(): boolean {
+    if (this.pageAmount) {
+      return this.pageAmount <= this.page - 1;
+    } else {
+      return false;
+    }
   }
 }

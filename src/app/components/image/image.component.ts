@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 // Types
 import { Image } from 'src/app/types/Image';
@@ -7,12 +7,6 @@ import { Image } from 'src/app/types/Image';
   selector: 'app-image',
   templateUrl: './image.component.html',
 })
-export class ImageComponent implements OnInit {
+export class ImageComponent {
   @Input() image: Image = { title: '', src: '' };
-  @Input() images: Image[] = [];
-  @Input() key: number = 0;
-
-  constructor() {}
-
-  ngOnInit(): void {}
 }

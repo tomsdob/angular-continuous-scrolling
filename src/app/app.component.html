@@ -10,7 +10,7 @@
   <app-loading-spinner *ngIf="isLoading"></app-loading-spinner>
   <p
     class="mt-8 mb-4 text-xl font-medium text-center text-gray-500"
-    *ngIf="this.pageAmount && this.pageAmount <= this.page - 1"
+    *ngIf="isLastPage()"
   >
     Sorry, no more images available at the moment!
   </p>
