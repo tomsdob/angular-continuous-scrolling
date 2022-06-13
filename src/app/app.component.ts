@@ -6,6 +6,7 @@ import {
   QueryList,
   ViewChildren,
 } from '@angular/core';
+import { finalize } from 'rxjs';
 import { ApiService } from './services/api.service';
 import { ImageComponent } from './components/image/image.component';
 
@@ -59,45 +60,39 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   getImages(page: number): void {
-    // Checking if it's the last page
-    if (this.isLastPage()) {
-      return;
-    }
-
     this.isLoading = true;
 
-    this.apiService.getData(page).subscribe((data: APIData) => {
-      data.results.forEach((character: Character) => {
-        // Add each image to the images array
-
-        // const image: Image = {
-        //   title: character.name,
-        //   src: character.image,
-        // };
-        // this.images.push(image);
-
-        this.images.push({
-          title: character.name,
-          src: character.image,
+    this.apiService
+      .getData(page)
+      .pipe(
+        finalize(() => {
+          this.page += 1;
+          this.isLoading = false;
+        })
+      )
+      .subscribe((data: APIData) => {
+        data.results.forEach((character: Character) => {
+          // Add each character to the images array as an image
+          this.images.push({
+            title: character.name,
+            src: character.image,
+          });
         });
       });
-    });
-
-    this.page += 1;
-    this.isLoading = false;
   }
 
   lastImageIntersectionObserver(): void {
     const options = {
       root: null,
       rootMargin: '0px',
-      threshold: 1,
+      threshold: 0.5,
     };
 
     this.lastImageObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        // If the last element is in view/intersecting, fetch new images
-        if (entry.isIntersecting) {
+        // If the last element is in view/intersecting and it's not the last
+        // page, fetch new images
+        if (entry.isIntersecting && !this.isLastPage()) {
           this.getImages(this.page);
         }
       });
