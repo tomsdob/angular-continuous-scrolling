@@ -13,7 +13,7 @@ import { APIData } from '../types/APIData';
   providedIn: 'root',
 })
 export class ApiService {
-  private apiURL: string = 'https://rickandmortyapi.com/api/character';
+  apiURL: string = 'https://rickandmortyapi.com/api/character';
 
   constructor(private http: HttpClient) {}
 
